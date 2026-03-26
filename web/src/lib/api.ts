@@ -181,6 +181,12 @@ export const api = {
       body: JSON.stringify({ approve, reason: reason || "" }),
     }),
 
+  // Messages: clear history
+  clearBotMessages: (botId: string) =>
+    request<{ deleted: number }>(`/api/bots/${botId}/messages`, { method: "DELETE" }),
+  clearAllMessages: () =>
+    request<{ deleted: number }>("/api/admin/messages", { method: "DELETE" }),
+
   // Webhook logs
   webhookLogs: (botId: string, channelId?: string, limit = 50) =>
     request<any[]>(

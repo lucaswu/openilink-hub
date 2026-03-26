@@ -18,21 +18,40 @@ import {
   Cpu,
   AlertTriangle,
   TrendingUp,
+  Eraser,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 export function DashboardOverviewPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     api.stats()
       .then(setStats)
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleClearAll() {
+    if (!confirm("确定要清空所有账号的历史消息？此操作不可恢复。")) return;
+    setClearing(true);
+    try {
+      const result = await api.clearAllMessages();
+      toast({ title: "所有历史消息已清空", description: `共删除 ${result.deleted} 条消息` });
+      api.stats().then(setStats);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "清空失败", description: e.message });
+    } finally {
+      setClearing(false);
+    }
+  }
 
   if (loading) return (
     <div className="space-y-8">
@@ -51,6 +70,10 @@ export function DashboardOverviewPage() {
           <p className="text-muted-foreground font-medium">查看账号状态和消息统计。</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button variant="outline" className="rounded-full h-12 px-6 font-bold text-xs uppercase tracking-widest border-destructive/30 text-destructive hover:bg-destructive/10 gap-2" onClick={handleClearAll} disabled={clearing}>
+            {clearing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eraser className="h-4 w-4" />}
+            清空所有历史
+          </Button>
           <Button variant="outline" className="rounded-full h-12 px-6 font-bold text-xs uppercase tracking-widest border-border/50 bg-background/50 hover:bg-muted" onClick={() => navigate("/dashboard/accounts")}>
             账号管理
           </Button>

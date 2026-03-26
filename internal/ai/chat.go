@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -83,6 +84,7 @@ func Complete(ctx context.Context, cfg store.AIConfig, s store.MessageStore, cha
 	endpoint := strings.TrimRight(baseURL, "/") + "/chat/completions"
 
 	reqBody, _ := json.Marshal(chatRequest{Model: model, Messages: messages})
+	slog.Info("ai chat request", "endpoint", endpoint, "model", model, "message_count", len(messages), "messages", messages)
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(reqBody))
 	if err != nil {
 		return "", err

@@ -52,6 +52,7 @@ func (s *AI) reply(d Delivery) {
 		}
 	}
 
+	slog.Info("ai completion request", "channel", d.Channel.ID, "base_url", cfg.BaseURL, "model", cfg.Model)
 	reply, err := ai.Complete(ctx, cfg, s.Store, d.Channel.ID, sender, d.Content)
 
 	if typingTicket != "" {

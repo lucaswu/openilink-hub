@@ -129,6 +129,7 @@ func (s *Server) Handler() http.Handler {
 	protected.HandleFunc("PUT /api/bots/{id}/channels/{cid}", s.handleUpdateChannel)
 	protected.HandleFunc("DELETE /api/bots/{id}/channels/{cid}", s.handleDeleteChannel)
 	protected.HandleFunc("POST /api/bots/{id}/channels/{cid}/rotate_key", s.handleRotateKey)
+	protected.HandleFunc("DELETE /api/bots/{id}/messages", s.handleClearBotMessages)
 
 	// Bot operations
 	protected.HandleFunc("PUT /api/bots/{id}", s.handleUpdateBot)
@@ -180,6 +181,7 @@ func (s *Server) Handler() http.Handler {
 
 	// --- Admin: dashboard ---
 	protected.HandleFunc("GET /api/admin/stats", s.requireAdmin(s.handleAdminStats))
+	protected.HandleFunc("DELETE /api/admin/messages", s.requireAdmin(s.handleClearAllMessages))
 
 	// --- Admin: webhook plugins ---
 	protected.HandleFunc("PUT /api/admin/webhook-plugins/{id}/review", s.requireAdmin(s.handleReviewPlugin))

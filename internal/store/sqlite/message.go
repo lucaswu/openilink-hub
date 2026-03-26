@@ -225,6 +225,22 @@ func (db *DB) GetUnprocessedMessages(botID string, limit int) ([]store.Message, 
 	)
 }
 
+func (db *DB) ClearBotMessages(botID string) (int64, error) {
+	result, err := db.Exec("DELETE FROM messages WHERE bot_id = ?", botID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+func (db *DB) ClearAllMessages() (int64, error) {
+	result, err := db.Exec("DELETE FROM messages")
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 func (db *DB) PruneMessages(maxAgeDays int) (int64, error) {
 	result, err := db.Exec("DELETE FROM messages WHERE created_at < unixepoch() - 86400 * ?", maxAgeDays)
 	if err != nil {

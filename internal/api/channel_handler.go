@@ -153,6 +153,35 @@ func (s *Server) handleDeleteChannel(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w)
 }
 
+func (s *Server) handleClearBotMessages(w http.ResponseWriter, r *http.Request) {
+	userID := auth.UserIDFromContext(r.Context())
+	botID := r.PathValue("id")
+
+	bot, err := s.Store.GetBot(botID)
+	if err != nil || bot.UserID != userID {
+		jsonError(w, "not found", http.StatusNotFound)
+		return
+	}
+
+	count, err := s.Store.ClearBotMessages(botID)
+	if err != nil {
+		jsonError(w, "clear failed", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]int64{"deleted": count})
+}
+
+func (s *Server) handleClearAllMessages(w http.ResponseWriter, r *http.Request) {
+	count, err := s.Store.ClearAllMessages()
+	if err != nil {
+		jsonError(w, "clear failed", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]int64{"deleted": count})
+}
+
 func (s *Server) handleRotateKey(w http.ResponseWriter, r *http.Request) {
 	cid := r.PathValue("cid")
 	userID := auth.UserIDFromContext(r.Context())

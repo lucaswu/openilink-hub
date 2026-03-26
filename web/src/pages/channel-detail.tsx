@@ -21,6 +21,7 @@ import {
   Info,
   ChevronRight,
   Filter,
+  Eraser,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -493,9 +494,24 @@ function FilterTab({ channel, botId, onRefresh }: { channel: any; botId: string;
 function WebhookLogsTab({ channel, botId }: { channel: any; botId: string }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [clearing, setClearing] = useState(false);
+  const { toast } = useToast();
 
   async function load() {
     try { const data = await api.webhookLogs(botId, channel.id, 50); setLogs(data || []); } finally { setLoading(false); }
+  }
+
+  async function handleClear() {
+    if (!confirm("确定要清空此账号的所有历史消息？此操作不可恢复。")) return;
+    setClearing(true);
+    try {
+      const result = await api.clearBotMessages(botId);
+      toast({ title: "历史消息已清空", description: `共删除 ${result.deleted} 条消息` });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "清空失败", description: e.message });
+    } finally {
+      setClearing(false);
+    }
   }
 
   useEffect(() => {
@@ -508,7 +524,13 @@ function WebhookLogsTab({ channel, botId }: { channel: any; botId: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">最近 50 条请求记录（5 秒自动刷新）</p>
-        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={load}>刷新</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 text-destructive border-destructive/20 hover:bg-destructive/10" onClick={handleClear} disabled={clearing}>
+            {clearing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eraser className="h-3 w-3" />}
+            清空历史
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={load}>刷新</Button>
+        </div>
       </div>
       <div className="rounded-xl border overflow-hidden">
         <Table>

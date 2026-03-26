@@ -56,4 +56,6 @@ type MessageStore interface {
 	MarkProcessed(id int64) error
 	GetUnprocessedMessages(botID string, limit int) ([]Message, error)
 	PruneMessages(maxAgeDays int) (int64, error)
+	ClearBotMessages(botID string) (int64, error)
+	ClearAllMessages() (int64, error)
 }
