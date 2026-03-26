@@ -123,6 +123,18 @@ export const api = {
   }) => request("/api/admin/config/ai", { method: "PUT", body: JSON.stringify(data) }),
   deleteAIConfig: () => request("/api/admin/config/ai", { method: "DELETE" }),
 
+  // Admin: Webhook config
+  getWebhookConfig: () => request<any>("/api/admin/config/webhook"),
+  setWebhookConfig: (data: {
+    url?: string;
+    auth_type?: string;
+    auth_token?: string;
+    auth_header_name?: string;
+    auth_header_value?: string;
+    auth_secret?: string;
+  }) => request("/api/admin/config/webhook", { method: "PUT", body: JSON.stringify(data) }),
+  deleteWebhookConfig: () => request("/api/admin/config/webhook", { method: "DELETE" }),
+
   // Apps
   createApp: (data: any) =>
     request<any>("/api/apps", { method: "POST", body: JSON.stringify(data) }),

@@ -197,6 +197,9 @@ func (s *Server) Handler() http.Handler {
 	protected.HandleFunc("GET /api/admin/config/ai", s.requireAdmin(s.handleGetAIConfig))
 	protected.HandleFunc("PUT /api/admin/config/ai", s.requireAdmin(s.handleSetAIConfig))
 	protected.HandleFunc("DELETE /api/admin/config/ai", s.requireAdmin(s.handleDeleteAIConfig))
+	protected.HandleFunc("GET /api/admin/config/webhook", s.requireAdmin(s.handleGetWebhookConfig))
+	protected.HandleFunc("PUT /api/admin/config/webhook", s.requireAdmin(s.handleSetWebhookConfig))
+	protected.HandleFunc("DELETE /api/admin/config/webhook", s.requireAdmin(s.handleDeleteWebhookConfig))
 
 	// App OAuth exchange (no user auth — app uses client_secret)
 	mux.HandleFunc("POST /api/apps/{id}/oauth/exchange", s.handleAppOAuthExchange)

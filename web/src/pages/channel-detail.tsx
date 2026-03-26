@@ -271,6 +271,7 @@ export function ChannelDetailPage() {
 function WebhookTab({ channel, botId, onRefresh }: { channel: any; botId: string; onRefresh: () => void }) {
   const cfg = channel.webhook_config || {};
   const [form, setForm] = useState({
+    source: cfg.source || "custom",
     url: cfg.url || "",
     authType: cfg.auth?.type || "none",
     authToken: cfg.auth?.token || "",
@@ -291,8 +292,9 @@ function WebhookTab({ channel, botId, onRefresh }: { channel: any; botId: string
 
       await api.updateChannel(botId, channel.id, {
         webhook_config: {
-          url: form.url,
-          auth,
+          source: form.source,
+          url: form.source === "custom" ? form.url : undefined,
+          auth: form.source === "custom" ? auth : undefined,
           script: form.script || undefined,
         },
       });
@@ -310,34 +312,48 @@ function WebhookTab({ channel, botId, onRefresh }: { channel: any; botId: string
         <CardHeader><CardTitle className="text-lg">Webhook 设置</CardTitle><CardDescription>消息将转发到此地址。</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-medium">Webhook URL</label>
-            <Input placeholder="https://..." value={form.url} onChange={e => setForm({...form, url: e.target.value})} className="font-mono" />
-          </div>
-          <div className="space-y-3 pt-2">
-            <p className="text-xs font-medium">认证方式</p>
-            <div className="flex flex-wrap gap-2">
-              {["none", "bearer", "header", "hmac"].map(t => (
-                <Button 
-                  key={t} 
-                  variant={form.authType === t ? "default" : "outline"} 
-                  className="h-7 px-3 py-1 uppercase text-[10px] rounded-full" 
-                  onClick={() => setForm({...form, authType: t as any})}
-                >
-                  {t}
-                </Button>
-              ))}
+            <p className="text-xs font-medium">转发目标</p>
+            <div className="flex gap-2">
+              <Button variant={form.source === "builtin" ? "default" : "outline"} size="sm" onClick={() => setForm({...form, source: "builtin"})}>系统内置</Button>
+              <Button variant={form.source === "custom" ? "default" : "outline"} size="sm" onClick={() => setForm({...form, source: "custom"})}>自定义地址</Button>
             </div>
-            <div className="pt-2">
-              {form.authType === "bearer" && <Input placeholder="Token" value={form.authToken} onChange={e => setForm({...form, authToken: e.target.value})} className="h-9 font-mono" />}
-              {form.authType === "header" && (
-                <div className="flex gap-2">
-                  <Input placeholder="Name" value={form.authName} onChange={e => setForm({...form, authName: e.target.value})} className="h-9" />
-                  <Input placeholder="Value" value={form.authValue} onChange={e => setForm({...form, authValue: e.target.value})} className="h-9" />
+            {form.source === "builtin" && (
+              <p className="text-[11px] text-muted-foreground">使用系统概览中配置的全局 Webhook 地址。</p>
+            )}
+          </div>
+          {form.source === "custom" && (
+            <>
+              <div className="space-y-2">
+                <label className="text-xs font-medium">Webhook URL</label>
+                <Input placeholder="https://..." value={form.url} onChange={e => setForm({...form, url: e.target.value})} className="font-mono" />
+              </div>
+              <div className="space-y-3 pt-2">
+                <p className="text-xs font-medium">认证方式</p>
+                <div className="flex flex-wrap gap-2">
+                  {["none", "bearer", "header", "hmac"].map(t => (
+                    <Button
+                      key={t}
+                      variant={form.authType === t ? "default" : "outline"}
+                      className="h-7 px-3 py-1 uppercase text-[10px] rounded-full"
+                      onClick={() => setForm({...form, authType: t as any})}
+                    >
+                      {t}
+                    </Button>
+                  ))}
                 </div>
-              )}
-              {form.authType === "hmac" && <Input placeholder="Secret" value={form.authValue} onChange={e => setForm({...form, authValue: e.target.value})} className="h-9 font-mono" />}
-            </div>
-          </div>
+                <div className="pt-2">
+                  {form.authType === "bearer" && <Input placeholder="Token" value={form.authToken} onChange={e => setForm({...form, authToken: e.target.value})} className="h-9 font-mono" />}
+                  {form.authType === "header" && (
+                    <div className="flex gap-2">
+                      <Input placeholder="Name" value={form.authName} onChange={e => setForm({...form, authName: e.target.value})} className="h-9" />
+                      <Input placeholder="Value" value={form.authValue} onChange={e => setForm({...form, authValue: e.target.value})} className="h-9" />
+                    </div>
+                  )}
+                  {form.authType === "hmac" && <Input placeholder="Secret" value={form.authValue} onChange={e => setForm({...form, authValue: e.target.value})} className="h-9 font-mono" />}
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
         <CardFooter className="bg-muted/30 pt-4 flex justify-end"><Button onClick={handleSave} disabled={saving} size="sm">{saving && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}保存设置</Button></CardFooter>
       </Card>
@@ -372,9 +388,16 @@ function AITab({ channel, botId, onRefresh }: { channel: any; botId: string; onR
   async function handleSave() {
     setSaving(true);
     try {
-      await api.updateChannel(botId, channel.id, {
-        ai_config: { ...form, base_url: form.baseUrl, api_key: form.apiKey || undefined, system_prompt: form.prompt, max_history: form.history }
-      });
+      const aiConfig: Record<string, any> = {
+        enabled: form.enabled,
+        source: form.source,
+        base_url: form.baseUrl,
+        model: form.model,
+        system_prompt: form.prompt,
+        max_history: form.history,
+      };
+      if (form.apiKey) aiConfig.api_key = form.apiKey;
+      await api.updateChannel(botId, channel.id, { ai_config: aiConfig });
       toast({ title: "AI 配置已保存" });
       onRefresh();
     } catch (e: any) {

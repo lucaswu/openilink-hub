@@ -90,6 +90,13 @@ export function Layout() {
     }
   }, [location.pathname]);
 
+  // Refresh bot list on explicit change events (e.g. rename)
+  useEffect(() => {
+    const handler = () => api.listBots().then(b => setBots(b || [])).catch(() => {});
+    window.addEventListener("bot-list-changed", handler);
+    return () => window.removeEventListener("bot-list-changed", handler);
+  }, []);
+
   if (!user) return null;
 
   const isAdmin = user.role === "admin" || user.role === "superadmin";

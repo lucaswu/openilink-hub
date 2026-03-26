@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Users, Cpu, Globe, Blocks, Database, Settings } from "lucide-react";
+import { BarChart3, Users, Cpu, Globe, Blocks, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,12 +21,15 @@ export function AdminOverviewPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [aiConfig, setAIConfig] = useState<any>(null);
+  const [webhookConfig, setWebhookConfig] = useState<any>({ url: "", auth_type: "none", auth_token: "", auth_header_name: "", auth_header_value: "", auth_secret: "" });
   const [saving, setSaving] = useState(false);
+  const [savingWebhook, setSavingWebhook] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     api.adminStats().then(setStats).finally(() => setLoading(false));
     api.getAIConfig().then(setAIConfig).catch(() => {});
+    api.getWebhookConfig().then(cfg => setWebhookConfig({ url: cfg.url || "", auth_type: cfg.auth_type || "none", auth_token: cfg.auth_token || "", auth_header_name: cfg.auth_header_name || "", auth_header_value: cfg.auth_header_value || "", auth_secret: cfg.auth_secret || "" })).catch(() => {});
   }, []);
 
   async function handleSaveAI() {
@@ -38,6 +41,17 @@ export function AdminOverviewPage() {
       toast({ variant: "destructive", title: "保存失败", description: e.message });
     }
     setSaving(false);
+  }
+
+  async function handleSaveWebhook() {
+    setSavingWebhook(true);
+    try {
+      await api.setWebhookConfig(webhookConfig);
+      toast({ title: "全局 Webhook 配置已保存" });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "保存失败", description: e.message });
+    }
+    setSavingWebhook(false);
   }
 
   return (
@@ -107,8 +121,33 @@ export function AdminOverviewPage() {
           <CardFooter className="bg-muted/30 pt-4 flex justify-end"><Button onClick={handleSaveAI} disabled={saving} className="rounded-full">保存</Button></CardFooter>
         </Card>
 
-        <Card className="border-border/50 bg-muted/10 opacity-60 rounded-[2rem] flex items-center justify-center border-dashed">
-          <div className="text-center p-8"><Settings className="h-10 w-10 mx-auto opacity-20 mb-4" /><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">更多配置开发中</p></div>
+        <Card className="border-border/50 bg-card/50 rounded-[2rem]">
+          <CardHeader>
+            <CardTitle>Webhook 配置</CardTitle>
+            <CardDescription>所有账号的默认 Webhook 设置。</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5"><label className="text-xs font-bold uppercase text-muted-foreground">Webhook URL</label><Input value={webhookConfig.url} onChange={e => setWebhookConfig({...webhookConfig, url: e.target.value})} className="rounded-xl h-10" placeholder="https://..." /></div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase text-muted-foreground">认证方式</label>
+              <div className="flex flex-wrap gap-2">
+                {["none", "bearer", "header", "hmac"].map(t => (
+                  <Button key={t} variant={webhookConfig.auth_type === t ? "default" : "outline"} className="h-7 px-3 uppercase text-[10px] rounded-full" onClick={() => setWebhookConfig({...webhookConfig, auth_type: t})}>{t}</Button>
+                ))}
+              </div>
+              <div className="pt-1">
+                {webhookConfig.auth_type === "bearer" && <Input type="password" placeholder="Token" value={webhookConfig.auth_token} onChange={e => setWebhookConfig({...webhookConfig, auth_token: e.target.value})} className="h-9 rounded-xl font-mono" />}
+                {webhookConfig.auth_type === "header" && (
+                  <div className="flex gap-2">
+                    <Input placeholder="Header Name" value={webhookConfig.auth_header_name} onChange={e => setWebhookConfig({...webhookConfig, auth_header_name: e.target.value})} className="h-9 rounded-xl" />
+                    <Input placeholder="Value" value={webhookConfig.auth_header_value} onChange={e => setWebhookConfig({...webhookConfig, auth_header_value: e.target.value})} className="h-9 rounded-xl" />
+                  </div>
+                )}
+                {webhookConfig.auth_type === "hmac" && <Input type="password" placeholder="Secret" value={webhookConfig.auth_secret} onChange={e => setWebhookConfig({...webhookConfig, auth_secret: e.target.value})} className="h-9 rounded-xl font-mono" />}
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="bg-muted/30 pt-4 flex justify-end"><Button onClick={handleSaveWebhook} disabled={savingWebhook} className="rounded-full">保存</Button></CardFooter>
         </Card>
       </div>
     </div>

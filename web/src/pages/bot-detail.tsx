@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -11,9 +11,13 @@ import {
   Unplug,
   MessageSquare,
   Activity,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Input } from "../components/ui/input";
 import { api } from "../lib/api";
 import {
   Tabs,
@@ -41,6 +45,10 @@ export function BotDetailPage() {
   const [bot, setBot] = useState<any>(null);
   const [channels, setChannels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+  const [hoveringName, setHoveringName] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Tabs synced with URL — only "channels" and "apps" are valid
   const rawTab = location.pathname.split("/").pop() || "channels";
@@ -84,6 +92,31 @@ export function BotDetailPage() {
     }
   };
 
+  const startEditName = () => {
+    setNameValue(bot.name);
+    setEditingName(true);
+    setTimeout(() => nameInputRef.current?.select(), 0);
+  };
+
+  const cancelEditName = () => {
+    setEditingName(false);
+    setNameValue("");
+  };
+
+  const saveEditName = async () => {
+    const trimmed = nameValue.trim();
+    if (!trimmed || trimmed === bot.name) { cancelEditName(); return; }
+    try {
+      await api.updateBot(bot.id, { name: trimmed });
+      toast({ title: "名称已更新" });
+      setEditingName(false);
+      load();
+      window.dispatchEvent(new CustomEvent("bot-list-changed"));
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "保存失败", description: e.message });
+    }
+  };
+
   if (loading) return <div className="space-y-6"><Skeleton className="h-20 w-full rounded-3xl" /><Skeleton className="h-96 w-full rounded-3xl" /></div>;
   if (!bot) return <div className="py-20 text-center space-y-4"><Unplug className="h-12 w-12 mx-auto opacity-20" /><p className="font-bold">未找到账号</p><Button variant="link" onClick={() => navigate("/dashboard/accounts")}>返回列表</Button></div>;
 
@@ -97,7 +130,38 @@ export function BotDetailPage() {
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-black tracking-tighter">{bot.name}</h1>
+              {editingName ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    ref={nameInputRef}
+                    value={nameValue}
+                    onChange={e => setNameValue(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") saveEditName(); if (e.key === "Escape") cancelEditName(); }}
+                    onBlur={saveEditName}
+                    className="text-2xl font-black tracking-tighter h-10 w-56 border-primary"
+                    autoFocus
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onMouseDown={e => { e.preventDefault(); saveEditName(); }}><Check className="h-4 w-4 text-green-600" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onMouseDown={e => { e.preventDefault(); cancelEditName(); }}><X className="h-4 w-4 text-muted-foreground" /></Button>
+                </div>
+              ) : (
+                <div
+                  className="flex items-center gap-2"
+                  onMouseEnter={() => setHoveringName(true)}
+                  onMouseLeave={() => setHoveringName(false)}
+                >
+                  <h1 className="text-3xl font-black tracking-tighter">{bot.name}</h1>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 transition-opacity"
+                    style={{ opacity: hoveringName ? 1 : 0 }}
+                    onClick={startEditName}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
               <Badge variant={bot.status === "connected" ? "default" : "destructive"} className="rounded-full px-3 py-0.5 text-[10px] font-black uppercase tracking-widest">
                 {bot.status}
               </Badge>

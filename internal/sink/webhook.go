@@ -315,8 +315,31 @@ func joinKeys(m map[string]bool) string {
 	return strings.Join(keys, ",")
 }
 
+func (s *Webhook) resolveConfig(cfg store.WebhookConfig) store.WebhookConfig {
+	if cfg.Source != "builtin" {
+		return cfg
+	}
+	global, _ := s.Store.ListConfigByPrefix("webhook.")
+	if global["webhook.url"] == "" {
+		return cfg
+	}
+	cfg.URL = global["webhook.url"]
+	authType := global["webhook.auth_type"]
+	switch authType {
+	case "bearer":
+		cfg.Auth = &store.WebhookAuth{Type: "bearer", Token: global["webhook.auth_token"]}
+	case "header":
+		cfg.Auth = &store.WebhookAuth{Type: "header", Name: global["webhook.auth_header_name"], Value: global["webhook.auth_header_value"]}
+	case "hmac":
+		cfg.Auth = &store.WebhookAuth{Type: "hmac", Secret: global["webhook.auth_secret"]}
+	default:
+		cfg.Auth = nil
+	}
+	return cfg
+}
+
 func (s *Webhook) Handle(d Delivery) {
-	cfg := d.Channel.WebhookConfig
+	cfg := s.resolveConfig(d.Channel.WebhookConfig)
 	if cfg.URL == "" && cfg.VersionID == "" && cfg.Script == "" {
 		return
 	}

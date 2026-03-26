@@ -45,6 +45,8 @@ services:
       # GITHUB_CLIENT_SECRET:
       # LINUXDO_CLIENT_ID:
       # LINUXDO_CLIENT_SECRET:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy

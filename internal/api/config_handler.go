@@ -148,7 +148,7 @@ func (s *Server) handleSetAIConfig(w http.ResponseWriter, r *http.Request) {
 	if req.BaseURL != "" {
 		s.Store.SetConfig("ai.base_url", req.BaseURL)
 	}
-	if req.APIKey != "" {
+	if req.APIKey != "" && !strings.Contains(req.APIKey, "*") {
 		s.Store.SetConfig("ai.api_key", req.APIKey)
 	}
 	if req.Model != "" {
@@ -159,6 +159,72 @@ func (s *Server) handleSetAIConfig(w http.ResponseWriter, r *http.Request) {
 	if req.MaxHistory != "" {
 		s.Store.SetConfig("ai.max_history", req.MaxHistory)
 	}
+	jsonOK(w)
+}
+
+// GET /api/admin/config/webhook — get global webhook config
+func (s *Server) handleGetWebhookConfig(w http.ResponseWriter, r *http.Request) {
+	dbConf, err := s.Store.ListConfigByPrefix("webhook.")
+	if err != nil {
+		jsonError(w, "query failed", http.StatusInternalServerError)
+		return
+	}
+	authToken := dbConf["webhook.auth_token"]
+	authValue := dbConf["webhook.auth_header_value"]
+	authSecret := dbConf["webhook.auth_secret"]
+	result := map[string]string{
+		"url":               dbConf["webhook.url"],
+		"auth_type":         dbConf["webhook.auth_type"],
+		"auth_token":        maskSecret(authToken),
+		"auth_header_name":  dbConf["webhook.auth_header_name"],
+		"auth_header_value": maskSecret(authValue),
+		"auth_secret":       maskSecret(authSecret),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+// PUT /api/admin/config/webhook — set global webhook config
+func (s *Server) handleSetWebhookConfig(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		URL             string `json:"url"`
+		AuthType        string `json:"auth_type"`
+		AuthToken       string `json:"auth_token"`
+		AuthHeaderName  string `json:"auth_header_name"`
+		AuthHeaderValue string `json:"auth_header_value"`
+		AuthSecret      string `json:"auth_secret"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	if req.URL != "" {
+		s.Store.SetConfig("webhook.url", req.URL)
+	}
+	s.Store.SetConfig("webhook.auth_type", req.AuthType)
+	if req.AuthToken != "" && !strings.Contains(req.AuthToken, "*") {
+		s.Store.SetConfig("webhook.auth_token", req.AuthToken)
+	}
+	if req.AuthHeaderName != "" {
+		s.Store.SetConfig("webhook.auth_header_name", req.AuthHeaderName)
+	}
+	if req.AuthHeaderValue != "" && !strings.Contains(req.AuthHeaderValue, "*") {
+		s.Store.SetConfig("webhook.auth_header_value", req.AuthHeaderValue)
+	}
+	if req.AuthSecret != "" && !strings.Contains(req.AuthSecret, "*") {
+		s.Store.SetConfig("webhook.auth_secret", req.AuthSecret)
+	}
+	jsonOK(w)
+}
+
+// DELETE /api/admin/config/webhook — remove global webhook config
+func (s *Server) handleDeleteWebhookConfig(w http.ResponseWriter, r *http.Request) {
+	s.Store.DeleteConfig("webhook.url")
+	s.Store.DeleteConfig("webhook.auth_type")
+	s.Store.DeleteConfig("webhook.auth_token")
+	s.Store.DeleteConfig("webhook.auth_header_name")
+	s.Store.DeleteConfig("webhook.auth_header_value")
+	s.Store.DeleteConfig("webhook.auth_secret")
 	jsonOK(w)
 }
 

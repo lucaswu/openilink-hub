@@ -17,6 +17,7 @@ type AIConfig struct {
 }
 
 type WebhookConfig struct {
+	Source    string       `json:"source,omitempty"` // "builtin" or "custom"
 	URL       string       `json:"url,omitempty"`
 	Auth      *WebhookAuth `json:"auth,omitempty"`
 	PluginID  string       `json:"plugin_id,omitempty"`

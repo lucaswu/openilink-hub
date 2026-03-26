@@ -106,6 +106,10 @@ func (s *Server) handleUpdateChannel(w http.ResponseWriter, r *http.Request) {
 	}
 	ai := &ch.AIConfig
 	if req.AIConfig != nil {
+		// Preserve existing API key if the new request doesn't include one
+		if req.AIConfig.APIKey == "" {
+			req.AIConfig.APIKey = ch.AIConfig.APIKey
+		}
 		ai = req.AIConfig
 	}
 	webhook := &ch.WebhookConfig
