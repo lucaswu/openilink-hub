@@ -230,7 +230,12 @@ func (db *DB) ClearBotMessages(botID string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	_, err = db.Exec("UPDATE bots SET msg_count = 0 WHERE id = ?", botID)
+	return n, err
 }
 
 func (db *DB) ClearAllMessages() (int64, error) {
@@ -238,7 +243,12 @@ func (db *DB) ClearAllMessages() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	_, err = db.Exec("UPDATE bots SET msg_count = 0")
+	return n, err
 }
 
 func (db *DB) PruneMessages(maxAgeDays int) (int64, error) {

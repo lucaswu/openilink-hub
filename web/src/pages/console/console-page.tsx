@@ -10,10 +10,13 @@ import {
   Image as ImageIcon,
   Film,
   FileText,
+  Eraser,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import { MessageItem, type MessageItemData } from "./message-items";
 
 type Message = {
@@ -41,11 +44,27 @@ export function ConsolePage() {
   const [stagedPreview, setStagedPreview] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [sending, setSending] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const { toast } = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const stickToBottomRef = useRef(true);
   const dragDepthRef = useRef(0);
   const stagedPreviewRef = useRef<string | null>(null);
+
+  const handleClearHistory = async () => {
+    if (!confirm("确定要清空此账号的所有对话历史？AI 将失去上下文记忆，此操作不可恢复。")) return;
+    setClearing(true);
+    try {
+      const result = await api.clearBotMessages(botId!);
+      toast({ title: "对话历史已清空", description: `共删除 ${result.deleted} 条消息` });
+      setMessages([]);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "清空失败", description: e.message });
+    } finally {
+      setClearing(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     if (!botId) return;
@@ -222,6 +241,17 @@ export function ConsolePage() {
         >
           实时推送
         </Badge>
+        <div className="flex-1" />
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs gap-1.5 text-destructive border-destructive/20 hover:bg-destructive/10"
+          onClick={handleClearHistory}
+          disabled={clearing}
+        >
+          {clearing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eraser className="h-3 w-3" />}
+          清空历史
+        </Button>
       </div>
 
       {/* Drag overlay */}
