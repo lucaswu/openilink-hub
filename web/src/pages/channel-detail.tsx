@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -21,6 +21,8 @@ import {
   Info,
   ChevronRight,
   Filter,
+  Pencil,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +63,10 @@ export function ChannelDetailPage() {
   const [channel, setChannel] = useState<any>(null);
   const [bot, setBot] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+  const [hoveringName, setHoveringName] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const activeTab = location.pathname.split("/").pop() || "overview";
 
@@ -103,6 +109,30 @@ export function ChannelDetailPage() {
     }
   }
 
+  const startEditName = () => {
+    setNameValue(channel.name);
+    setEditingName(true);
+    setTimeout(() => nameInputRef.current?.select(), 0);
+  };
+
+  const cancelEditName = () => {
+    setEditingName(false);
+    setNameValue("");
+  };
+
+  const saveEditName = async () => {
+    const trimmed = nameValue.trim();
+    if (!trimmed || trimmed === channel.name) { cancelEditName(); return; }
+    try {
+      await api.updateChannel(botId!, channelId!, { name: trimmed });
+      toast({ title: "名称已更新" });
+      setEditingName(false);
+      load();
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "保存失败", description: e.message });
+    }
+  };
+
   if (loading) return (
     <div className="space-y-6">
       <Skeleton className="h-12 w-[300px]" />
@@ -128,11 +158,42 @@ export function ChannelDetailPage() {
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">{channel.name}</h1>
-              <Button 
-                variant={channel.enabled ? "default" : "outline"} 
-                size="sm" 
-                className="h-6 px-2 text-[10px] uppercase font-bold rounded-full" 
+              {editingName ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    ref={nameInputRef}
+                    value={nameValue}
+                    onChange={e => setNameValue(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") saveEditName(); if (e.key === "Escape") cancelEditName(); }}
+                    onBlur={saveEditName}
+                    className="text-xl font-bold h-9 w-48 border-primary"
+                    autoFocus
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onMouseDown={e => { e.preventDefault(); saveEditName(); }}><Check className="h-4 w-4 text-green-600" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onMouseDown={e => { e.preventDefault(); cancelEditName(); }}><X className="h-4 w-4 text-muted-foreground" /></Button>
+                </div>
+              ) : (
+                <div
+                  className="flex items-center gap-2"
+                  onMouseEnter={() => setHoveringName(true)}
+                  onMouseLeave={() => setHoveringName(false)}
+                >
+                  <h1 className="text-2xl font-bold tracking-tight">{channel.name}</h1>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 transition-opacity"
+                    style={{ opacity: hoveringName ? 1 : 0 }}
+                    onClick={startEditName}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+              <Button
+                variant={channel.enabled ? "default" : "outline"}
+                size="sm"
+                className="h-6 px-2 text-[10px] uppercase font-bold rounded-full"
                 onClick={handleToggle}
               >
                 {channel.enabled ? "已启用" : "已停用"}
